@@ -15,7 +15,7 @@ INSTALLATION
 OPERATION
 Menus
 ====
-Track - add edit or remove a track from the current playlist
+Track - add edit or remove a track from the current playlist, add a directory to the current playlist
 Playlist - save the current playlist or open a saved one
 OMX - display the track information for the last played track (needs to be enabled in options)
 Options -
@@ -664,7 +664,8 @@ needs to start playing and not send a signal as it is this that triggers the sta
         + "o - forward a chapter\n n - previous subtitle index\n m - next subtitle index\n"
         + "s - toggle subtitles\n >cursor - seek forward 30\n <cursor - seek back 30\n"
         + "SHIFT >cursor - seek forward 600\n SHIFT <cursor - seek back 600\n"
-        + "CTRL >cursor - next track\n CTRL <cursor - previous track")
+        + "CTRL >cursor or n - next track\n CTRL <cursor - previous track\n"
+        + "r - toggle random mode")
   
 
     def about (self):
