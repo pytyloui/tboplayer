@@ -6,33 +6,32 @@ A GUI interface using jbaiter's pyomxplayer to control omxplayer
 
 INSTALLATION
 *** Instructions for installation on the official Debian Wheezy Raspbian image
-  *  requires the latest bug fixed version of omxplayer which you can get by doing apt-get update then apt-get upgrade
-  *  install pexpect by following the instructions at www.noah.org/wiki/pexpect
-  *  pyomxplayer is currently included inline in the code as I have made some modifications to jbaiter's version, his original can be seen at https://github.com/jbaiter/pyomxplayer
-  *  download tboplayer.py into a directory
-  *  type python tboplayer.py from a terminal opened in the directory within which tboplayer.py is stored. 
-  *  developed on raspbian wheezy with python 2.7
-  
+* requires the latest bug fixed version of omxplayer which you can get by doing apt-get update then apt-get upgrade
+* install pexpect by following the instructions at www.noah.org/wiki/pexpect
+* pyomxplayer is currently included inline in the code as I have made some modifications to jbaiter's version, his original can be seen at https://github.com/jbaiter/pyomxplayer
+* download tboplayer.py into a directory
+* type python tboplayer.py from a terminal opened in the directory within which tboplayer.py is stored.
+* developed on raspbian wheezy with python 2.7
 OPERATION
 Menus
 ====
- Track - add  edit or remove a track from the current playlist
- Playlist - save the current playlist or open a saved one
- OMX - display the track information for the last played track (needs to be enabled in options)
- Options -
-    Audio Output - play sound to hdmi or local output, auto does not send an audio option to omxplayer.
-    Mode - play the Single selected track, Repeat the single track or rotate around the Playlist starting from the selected track.
-    Subtitles - adjust with your own options if required
-    Initial directory for tracks - where Add Track starts looking.
-    Initial directory for playlists - where Open Playlist starts looking
-    OMX player options - add your own (no validation so be careful)
-    Debug - prints some debug text to the command line
-    Generate Track Information - parses the output of omxplayer, disabled by default as it may cause problems with some tracks.
+Track - add edit or remove a track from the current playlist
+Playlist - save the current playlist or open a saved one
+OMX - display the track information for the last played track (needs to be enabled in options)
+Options -
+Audio Output - play sound to hdmi or local output, auto does not send an audio option to omxplayer.
+Mode - play the Single selected track, Repeat the single track or rotate around the Playlist starting from the selected track.
+Subtitles - adjust with your own options if required
+Initial directory for tracks - where Add Track starts looking.
+Initial directory for playlists - where Open Playlist starts looking
+OMX player options - add your own (no validation so be careful)
+Debug - prints some debug text to the command line
+Generate Track Information - parses the output of omxplayer, disabled by default as it may cause problems with some tracks.
 
 A track is selected using a single click of the mouse, playing is started by pressing the Play button or the . key
 
-During playing of a track a slightly modified set of  omxplayer commands can be used from the keyboard but there must be FOCUS on TBOPlayer.
-A list  of comands is provided in the help menu. Note: some of the commands are not implemented by omxplayer.
+During playing of a track a slightly modified set of omxplayer commands can be used from the keyboard but there must be FOCUS on TBOPlayer.
+A list of comands is provided in the help menu. Note: some of the commands are not implemented by omxplayer.
 
 If you have problems playing a track try it from the command line with omxplayer -ohdmi file or omxplayer -olocal file
 
@@ -50,13 +49,14 @@ PROBLEMS
 ---------------
 I think I might have fixed this but two tracks may play at the same time if you use the controls quickly, you may need to SSH in form another computer and use top -upi and k to kill the omxplayer.bin
 Seek forward 600 and see back 600 appears to be broken in omxplayer
-Position thread does not seem to take account of  pause
+Position thread does not seem to take account of pause
 mp3 tracks always show position as zero.
 
 """
 
 # pyomxplayer from https://github.com/jbaiter/pyomxplayer
 # modified by KenT
+# modified by pytyloui
 
 # ********************************
 # PYOMXPLAYER
@@ -113,10 +113,10 @@ class OMXPlayer(object):
     
         # ***** KenT added signals to allow polling for end by a gui event loop and also to check if a track is playing before
         # sending a command to omxplayer
-        self.start_play_signal = True  
+        self.start_play_signal = True
 
         # **** KenT Added self.position=0. Required if dictionary creation is commented out. Possibly best to leave it in even if not
-        #         commented out in case gui reads position before it is first written.
+        # commented out in case gui reads position before it is first written.
         self.position=-100.0
         
         while True:
@@ -130,7 +130,7 @@ class OMXPlayer(object):
                 self.end_play_signal=True
                 break
             else:
-                self.position = float(self._process.match.group(1))                
+                self.position = float(self._process.match.group(1))
             sleep(0.05)
 
 
@@ -145,11 +145,11 @@ class OMXPlayer(object):
         try:
             file_props = self._FILEPROP_REXP.match(self._process.readline()).groups()
         except AttributeError:
-            return False        
+            return False
         (self.audio['streams'], self.video['streams'],
         self.chapters, self.subtitles) = [int(x) for x in file_props]
         
-        # Get video properties        
+        # Get video properties
         try:
             video_props = self._VIDEOPROP_REXP.match(self._process.readline()).groups()
         except AttributeError:
@@ -163,7 +163,7 @@ class OMXPlayer(object):
         try:
             audio_props = self._AUDIOPROP_REXP.match(self._process.readline()).groups()
         except AttributeError:
-            return False       
+            return False
         self.audio['decoder'] = audio_props[0]
         (self.audio['channels'], self.audio['rate'],
          self.audio['bps']) = [int(x) for x in audio_props[1:]]
@@ -227,6 +227,7 @@ import tkFont
 import csv
 import os
 import ConfigParser
+import random
 
 
 #**************************
@@ -242,12 +243,12 @@ class TBOPlayer:
 # ***************************************
 
     """self. play_state controls the playing sequence, it has the following values.
-         I am not entirely sure the startign and ending states are required.
-         - omx_closed - the omx process is not running, omx process can be initiated
-         - omx_starting - omx process is running but is not yet able to receive commands
-         - omx_playing - playing a track, commands can be sent
-         - omx_ending - omx is doing its termination, commands cannot be sent
-    """
+I am not entirely sure the startign and ending states are required.
+- omx_closed - the omx process is not running, omx process can be initiated
+- omx_starting - omx process is running but is not yet able to receive commands
+- omx_playing - playing a track, commands can be sent
+- omx_ending - omx is doing its termination, commands cannot be sent
+"""
 
     def init_play_state_machine(self):
 
@@ -257,26 +258,28 @@ class TBOPlayer:
         self._OMX_ENDING = "omx_ending"
 
         # what to do next signals
-        self.break_required_signal=False         # signal to break out of Repeat or Playlist loop
+        self.break_required_signal=False # signal to break out of Repeat or Playlist loop
         self.play_previous_track_signal = False
         self.play_next_track_signal = False
+        self.play_random_track_signal = False
+        self.play_random_signal = False
 
          # playing a track signals
         self.stop_required_signal=False
         self.play_state=self._OMX_CLOSED
-        self.quit_sent_signal = False          # signal  that q has been sent
+        self.quit_sent_signal = False # signal that q has been sent
         self.paused=False
 
 
 # kick off the state machine by playing a track
     def play(self):
-        if  self.play_state==self._OMX_CLOSED:
+        if self.play_state==self._OMX_CLOSED:
             if self.playlist.track_is_selected():
                 #initialise all the state machine variables
-                self.iteration = 0                             # for debugging
+                self.iteration = 0 # for debugging
                 self.paused = False
-                self.stop_required_signal=False     # signal that user has pressed stop
-                self.quit_sent_signal = False          # signal  that q has been sent
+                self.stop_required_signal=False # signal that user has pressed stop
+                self.quit_sent_signal = False # signal that q has been sent
                 self.play_state=self._OMX_STARTING
                 
                 #play the selelected track
@@ -288,49 +291,49 @@ class TBOPlayer:
         # self.monitor ("******Iteration: " + str(self.iteration))
         self.iteration +=1
         if self.play_state == self._OMX_CLOSED:
-            self.monitor("      State machine: " + self.play_state)
+            self.monitor(" State machine: " + self.play_state)
             self.what_next()
-            return 
+            return
                 
         elif self.play_state == self._OMX_STARTING:
-            self.monitor("      State machine: " + self.play_state)
+            self.monitor(" State machine: " + self.play_state)
             # if omxplayer is playing the track change to play state
             if self.omx.start_play_signal==True:
-                self.monitor("            <start play signal received from omx")
+                self.monitor(" <start play signal received from omx")
                 self.omx.start_play_signal=False
                 self.play_state=self._OMX_PLAYING
-                self.monitor("      State machine: omx_playing started")
+                self.monitor(" State machine: omx_playing started")
                 #if self.debug:
                    # pprint(self.omx.__dict__)
             self.root.after(500, self.play_state_machine)
 
         elif self.play_state == self._OMX_PLAYING:
-            # self.monitor("      State machine: " + self.play_state)
+            # self.monitor(" State machine: " + self.play_state)
             # service any queued stop signals
             if self.stop_required_signal==True:
-                self.monitor("      Service stop required signal")
+                self.monitor(" Service stop required signal")
                 self.stop_omx()
                 self.stop_required_signal=False
             else:
                 # quit command has been sent or omxplayer reports it is terminating so change to ending state
                 if self.quit_sent_signal == True or self.omx.end_play_signal== True:
                     if self.quit_sent_signal:
-                        self.monitor("            quit sent signal received")
+                        self.monitor(" quit sent signal received")
                         self.quit_sent_signal = False
-                    if self.omx.end_play_signal:                    
-                        self.monitor("            <end play signal received")
-                        self.monitor("            <end detected at: " + str(self.omx.position))
+                    if self.omx.end_play_signal:
+                        self.monitor(" <end play signal received")
+                        self.monitor(" <end detected at: " + str(self.omx.position))
                     self.play_state =self. _OMX_ENDING
                 self.do_playing()
             self.root.after(500, self.play_state_machine)
 
         elif self.play_state == self._OMX_ENDING:
-            self.monitor("      State machine: " + self.play_state)
+            self.monitor(" State machine: " + self.play_state)
             # if spawned process has closed can change to closed state
-            self.monitor ("      State machine : is omx process running -  "  + str(self.omx.is_running()))
+            self.monitor (" State machine : is omx process running - " + str(self.omx.is_running()))
             if self.omx.is_running() ==False:
-            #if self.omx.end_play_signal==True:    #this is not as safe as process has closed.
-                self.monitor("            <omx process is dead")
+            #if self.omx.end_play_signal==True: #this is not as safe as process has closed.
+                self.monitor(" <omx process is dead")
                 self.play_state = self._OMX_CLOSED
             self.do_ending()
             self.root.after(500, self.play_state_machine)
@@ -344,7 +347,7 @@ class TBOPlayer:
             if self.paused == False:
                 self.display_time.set(self.time_string(self.omx.position))
             else:
-                self.display_time.set("Paused")           
+                self.display_time.set("Paused")
 
     def do_starting(self):
         self.display_time.set("Starting")
@@ -359,25 +362,28 @@ class TBOPlayer:
     
     def play_track(self):
         """ respond to user input to play a track, ignore it if already playing
-              needs to start playing and not send a signal as it is this that triggers the state machine.
-        """
-        self.monitor(">play track received") 
+needs to start playing and not send a signal as it is this that triggers the state machine.
+"""
+        self.monitor(">play track received")
         if self.play_state == self._OMX_CLOSED:
             self.play()
         
 
     def skip_to_next_track(self):
         # send signals to stop and then to play the next track
-        self.monitor(">skip  to next received") 
-        self.monitor(">stop received for next track") 
+        self.monitor(">skip to next received")
+        self.monitor(">stop received for next track")
         self.stop_required_signal=True
-        self.play_next_track_signal=True
-        
+        if self.play_random_signal:
+            self.play_random_track_signal=True
+        else:
+            self.play_next_track_signal=True
+
 
     def skip_to_previous_track(self):
         # send signals to stop and then to play the previous track
-        self.monitor(">skip  to previous received")
-        self.monitor(">stop received for previous track") 
+        self.monitor(">skip to previous received")
+        self.monitor(">stop received for previous track")
         self.stop_required_signal=True
         self.play_previous_track_signal=True
 
@@ -417,6 +423,12 @@ class TBOPlayer:
             self.play_next_track_signal=False
             self.play()
             return
+        elif self.play_random_track_signal ==True:
+            self.monitor("What next, skip to random track")
+            self.select_random_track()
+            self.play_random_track_signal=False
+            self.play()
+            return
         elif self.play_previous_track_signal ==True:
             self.monitor("What next, skip to previous track")
             self.select_previous_track()
@@ -440,7 +452,7 @@ class TBOPlayer:
             self.monitor("What next, Starting playlist track")
             self.select_next_track()
             self.play()
-            return     
+            return
 
  
 
@@ -453,34 +465,34 @@ class TBOPlayer:
         track= "'"+ track.replace("'","'\\''") + "'"
         opts= self.options.omx_user_options + " "+ self.options.omx_audio_option + " " + self.options.omx_subtitles_option + " "
         self.omx = OMXPlayer(track, opts, start_playback=True, do_dict=self.options.generate_track_info)
-        self.monitor("            >Play: " + track + " with " + opts)
+        self.monitor(" >Play: " + track + " with " + opts)
 
 
     def stop_omx(self):
-        if self.play_state ==  self._OMX_PLAYING:
-            self.monitor("            >Send stop to omx") 
+        if self.play_state == self._OMX_PLAYING:
+            self.monitor(" >Send stop to omx")
             self.omx.stop()
         else:
-            self.monitor ("            !>stop not sent to OMX because track not playing")
+            self.monitor (" !>stop not sent to OMX because track not playing")
 
 
     def send_command(self,command):
-        if (command in '+-pz12jkionms') and self.play_state ==  self._OMX_PLAYING:
-            self.monitor("            >Send Command: "+command) 
+        if (command in '+-pz12jkionms') and self.play_state == self._OMX_PLAYING:
+            self.monitor(" >Send Command: "+command)
             self.omx.send_command(command)
             return True
         else:
-            self.monitor ("            !>Send command: illegal control or track not playing")
+            self.monitor (" !>Send command: illegal control or track not playing")
             return False
 
         
     def send_special(self,command):
-        if self.play_state ==  self._OMX_PLAYING:
-            self.monitor("            >Send special") 
+        if self.play_state == self._OMX_PLAYING:
+            self.monitor(" >Send special")
             self.omx.send_command(command)
             return True
         else:
-            self.monitor ("            !>Send special: track not playing")
+            self.monitor (" !>Send special: track not playing")
             return False
 
 
@@ -520,13 +532,13 @@ class TBOPlayer:
         self.display_time = tk.StringVar()
 
         #Keys
-        #self.root.bind("<Return>", self.key_return)  #select track
+        #self.root.bind("<Return>", self.key_return) #select track
         self.root.bind("<Left>", self.key_left)
         self.root.bind("<Right>", self.key_right)
-        self.root.bind("<Shift-Right>", self.key_shiftright)  #forward 600
-        self.root.bind("<Shift-Left>", self.key_shiftleft)  #back 600
-        self.root.bind("<Control-Right>", self.key_ctrlright)  #previous track      
-        self.root.bind("<Control-Left>", self.key_ctrlleft)  #previous track
+        self.root.bind("<Shift-Right>", self.key_shiftright) #forward 600
+        self.root.bind("<Shift-Left>", self.key_shiftleft) #back 600
+        self.root.bind("<Control-Right>", self.key_ctrlright) #previous track
+        self.root.bind("<Control-Left>", self.key_ctrlleft) #previous track
     
         self.root.bind("<Key>", self.key_pressed)
 
@@ -537,6 +549,7 @@ class TBOPlayer:
         menubar.add_cascade(label='Track', menu = filemenu)
         filemenu.add_command(label='Add', command = self.add_track)
         filemenu.add_command(label='Add URL', command = self.add_url)
+        filemenu.add_command(label='Add dir', command = self.add_dir)
         filemenu.add_command(label='Remove', command = self.remove_track)
         filemenu.add_command(label='Edit', command = self.edit_track)
         
@@ -562,7 +575,7 @@ class TBOPlayer:
         self.root.config(menu=menubar)
 
 
-# define buttons 
+# define buttons
 
         add_button = Button(self.root, width = 5, height = 1, text='Add',
                               fg='black', command = self.add_track, bg="light grey")
@@ -615,7 +628,7 @@ class TBOPlayer:
 
 
 #and display them going with Tkinter event loop
-        self.root.mainloop()        
+        self.root.mainloop()
 
 
 #exit
@@ -656,7 +669,7 @@ class TBOPlayer:
 
     def about (self):
         tkMessageBox.showinfo("About","GUI for omxplayer using jbaiter's pyomxplayer wrapper\n"
-                   +"Version dated: " + datestring + "\nAuthor: Ken Thompson  - KenT")
+                   +"Version dated: " + datestring + "\nAuthor: Ken Thompson - KenT")
 
     def monitor(self,text):
         if self.options.debug: print text
@@ -686,8 +699,8 @@ class TBOPlayer:
     def key_ctrlleft(self,event):
         self.skip_to_previous_track()
 
-#    def key_return(self,event):
-#        self.select_track(event)
+# def key_return(self,event):
+# self.select_track(event)
         
         
     def key_pressed(self,event):
@@ -704,6 +717,12 @@ class TBOPlayer:
             return
         elif char=='q':
             self.stop_track()
+            return
+        elif char=='r':
+            self.play_random_signal=not self.play_random_signal
+            return
+        elif char=='n':
+            self.skip_to_next_track()
             return
         else:
             self.send_command(char)
@@ -732,17 +751,17 @@ class TBOPlayer:
 
 
 # ***************************************
-# TRACKS AND PLAYLISTS  CALLBACKS
+# TRACKS AND PLAYLISTS CALLBACKS
 # ***************************************
 
-    def add_track(self):                                
+    def add_track(self):
         """
-        Opens a dialog box to open a file,
-        then stores the  track in the playlist.
-        """
+Opens a dialog box to open a file,
+then stores the track in the playlist.
+"""
         # get the file
         self.filename.set(tkFileDialog.askopenfilename(initialdir=self.options.initial_track_dir,
-			multiple=False))
+multiple=False))
 
         self.file = self.filename.get()
         if self.file=="":
@@ -758,7 +777,36 @@ class TBOPlayer:
         # and set it as the selected track
         self.playlist.select(self.playlist.length()-1)
         self.display_selected_track(self.playlist.selected_track_index())
+
+    def ajoute(self,dir):
+        for f in os.listdir(dir):
+            n=os.path.join(dir,f)
+            if os.path.isdir(n):
+                self.ajoute(n)
+            if os.path.isfile(n) and n[-4:]==".mp3":
+                self.filename.set(n)
+                self.file = self.filename.get()
+                # split it to use leaf as the initial title
+                self.file_pieces = self.file.split("/")
+
+                # append it to the playlist
+                self.playlist.append([self.file, self.file_pieces[-1],'',''])
+                # add title to playlist display
+                self.track_titles_display.insert(END, self.file_pieces[-1])
         
+    def add_dir(self):
+        """
+        Opens a dialog box to open a file,
+        then stores the  track in the playlist.
+        """
+        # get the file
+        dirname=tkFileDialog.askdirectory(initialdir=self.options.initial_track_dir)
+        print dirname
+        if dirname =="" or dirname == ():
+            return
+        else:
+            self.ajoute(dirname)
+            return
 
     def add_url(self):
         d = EditTrackDialog(self.root,"Add URL",
@@ -768,13 +816,13 @@ class TBOPlayer:
             # append it to the playlist
             self.playlist.append(d.result)
             # add title to playlist display
-            self.track_titles_display.insert(END, d.result[1])  
+            self.track_titles_display.insert(END, d.result[1])
             # and set it as the selected track
             self.playlist.select(self.playlist.length()-1)
             self.display_selected_track(self.playlist.selected_track_index())
    
     def remove_track(self):
-        if  self.playlist.length()>0 and self.playlist.track_is_selected():
+        if self.playlist.length()>0 and self.playlist.track_is_selected():
             index= self.playlist.selected_track_index()
             self.track_titles_display.delete(index,index)
             self.playlist.remove(index)
@@ -790,22 +838,22 @@ class TBOPlayer:
                                 "Title", self.playlist.selected_track_title)
             if d.result != None:
                 self.playlist.replace(index, d.result)
-                self.playlist.select(index)               
+                self.playlist.select(index)
                 self.display_selected_track(index)
                 self.refresh_playlist_display()
 
 
     def select_track(self, event):
         """
-        user clicks on a track in the display list so try and select it
-        """
+user clicks on a track in the display list so try and select it
+"""
         # needs forgiving int for possible tkinter upgrade
         if self.playlist.length()>0:
             index=int(event.widget.curselection()[0])
             self.playlist.select(index)
             self.display_selected_track(index)
 
-    	
+    
     def select_next_track(self):
         if self.playlist.length()>0:
             if self.playlist.selected_track_index()== self.playlist.length()-1:
@@ -815,6 +863,11 @@ class TBOPlayer:
             self.playlist.select(index)
             self.display_selected_track(index)
 
+    def select_random_track(self):
+        if self.playlist.length()>0:
+            index=random.randint(0,self.playlist.length()-1)
+            self.playlist.select(index)
+            self.display_selected_track(index)
 
                 
     def select_previous_track(self):
@@ -823,7 +876,7 @@ class TBOPlayer:
                 index=self.playlist.length()-1
             else:
                index = self.playlist.selected_track_index()- 1
-            self.playlist.select(index)               
+            self.playlist.select(index)
             self.display_selected_track(index)
 
       
@@ -833,18 +886,18 @@ class TBOPlayer:
 
     def open_list(self):
         """
-        opens a saved playlist
-        playlists are stored as textfiles each record being "path","title"
-        """
+opens a saved playlist
+playlists are stored as textfiles each record being "path","title"
+"""
 
         self.filename.set(tkFileDialog.askopenfilename(initialdir=self.options.initial_playlist_dir,
                         defaultextension = ".csv",
                         filetypes = [('csv files', '.csv')],
-			multiple=False))
+multiple=False))
         filename = self.filename.get()
         if filename=="":
             return
-        ifile  = open(filename, 'rb')
+        ifile = open(filename, 'rb')
         pl=csv.reader(ifile)
         self.playlist.clear()
         self.track_titles_display.delete(0,self.track_titles_display.size())
@@ -875,10 +928,11 @@ class TBOPlayer:
         filename = self.filename.get()
         if filename=="":
             return
-        ofile  = open(filename, "wb")
+        ofile = open(filename, "wb")
         for idx in range(self.playlist.length()):
-                self.playlist.select(idx)
-                ofile.write ('"' + self.playlist.selected_track()[PlayList.LOCATION] + '","' + self.playlist.selected_track()[PlayList.TITLE]+'"\n')
+            self.playlist.select(idx)
+            line='"' + self.playlist.selected_track()[PlayList.LOCATION] + '","' + self.playlist.selected_track()[PlayList.TITLE]+'"\n'
+            ofile.write(line.encode('utf8'))
         ofile.close()
         return
 
@@ -886,7 +940,7 @@ class TBOPlayer:
     def show_omx_track_info(self):
 
         if self.options.generate_track_info:
-            tkMessageBox.showinfo("Track Information", self.playlist.selected_track()[PlayList.LOCATION]  +"\n"+ pformat(self.omx.__dict__))
+            tkMessageBox.showinfo("Track Information", self.playlist.selected_track()[PlayList.LOCATION] +"\n"+ pformat(self.omx.__dict__))
         else:
             tkMessageBox.showinfo("Track Information","Not Enabled")
 
@@ -908,11 +962,11 @@ class Options:
         self.omx_audio_option = "" # omx audio option
         self.omx_subtitles_option = "" # omx subtitle option
         self.mode = ""
-        self.initial_track_dir =""   #initial directory for add track.
-        self.initial_playlist_dir =""   #initial directory for open playlist      
-        self.omx_user_options = ""  # omx options suppplied by user, audio overidden by audio option (HDMI or local)
-        self.debug = False  # print debug information to terminal
-        self.generate_track_info = False  #generate track information from omxplayer output
+        self.initial_track_dir ="" #initial directory for add track.
+        self.initial_playlist_dir ="" #initial directory for open playlist
+        self.omx_user_options = "" # omx options suppplied by user, audio overidden by audio option (HDMI or local)
+        self.debug = False # print debug information to terminal
+        self.generate_track_info = False #generate track information from omxplayer output
 
     # create an options file if necessary
         self.options_file = 'tboplayer.cfg'
@@ -928,37 +982,37 @@ class Options:
         config=ConfigParser.ConfigParser()
         config.read(filename)
         
-        if  config.get('config','audio',0)=='auto':
+        if config.get('config','audio',0)=='auto':
              self.omx_audio_option=""
         else:
             self.omx_audio_option = "-o "+config.get('config','audio',0)
             
         self.mode = config.get('config','mode',0)
         self.initial_track_dir =config.get('config','tracks',0)
-        self.initial_playlist_dir =config.get('config','playlists',0)    
+        self.initial_playlist_dir =config.get('config','playlists',0)
         self.omx_user_options =config.get('config','omx_options',0)
 
         if config.get('config','debug',0) == 'on':
-            self.debug  =True
+            self.debug =True
         else:
             self.debug=False
 
         if config.get('config','subtitles',0) == 'on':
-            self.omx_subtitles_option  = "-t on"
+            self.omx_subtitles_option = "-t on"
         else:
             self.omx_subtitles_option=""
 
         if config.get('config','track_info',0) == 'on':
-            self.generate_track_info  = True
+            self.generate_track_info = True
         else:
-            self.generate_track_info = False          
+            self.generate_track_info = False
          
 
     def create(self,filename):
         config=ConfigParser.ConfigParser()
         config.add_section('config')
         config.set('config','audio','hdmi')
-        config.set('config','subtitles','off')       
+        config.set('config','subtitles','off')
         config.set('config','mode','single')
         config.set('config','playlists','')
         config.set('config','tracks','')
@@ -1050,7 +1104,7 @@ class OptionsDialog(tkSimpleDialog.Dialog):
         else:
             self.cb_track_info.deselect()
 
-        return None    # no initial focus
+        return None # no initial focus
 
     def apply(self):
         self.save_options()
@@ -1082,7 +1136,7 @@ class EditTrackDialog(tkSimpleDialog.Dialog):
     def __init__(self, parent, title=None, *args):
         #save the extra args to instance variables
         self.label_location=args[0]
-        self.default_location=args[1]       
+        self.default_location=args[1]
         self.label_title=args[2]
         self.default_title=args[3]
         #and call the base class _init_which uses the args in body
@@ -1120,8 +1174,8 @@ class EditTrackDialog(tkSimpleDialog.Dialog):
 
 class PlayList():
     """
-    manages a playlist of tracks and the track selected from the playlist
-    """
+manages a playlist of tracks and the track selected from the playlist
+"""
 
     #field definition constants
     LOCATION=0
@@ -1134,10 +1188,10 @@ class PlayList():
 
     def __init__(self):
         self._num_tracks=0
-        self._tracks = []      # list of track titles
+        self._tracks = [] # list of track titles
         self._selected_track = PlayList._new_track
-        self._selected_track_index =  -1 # index of currently selected track
-        self._tracks=[]     #playlist, stored as a list of lists
+        self._selected_track_index = -1 # index of currently selected track
+        self._tracks=[] #playlist, stored as a list of lists
 
     def length(self):
         return self._num_tracks
@@ -1199,4 +1253,3 @@ class PlayList():
 if __name__ == "__main__":
     datestring=" 20 Nov 2012"
     bplayer = TBOPlayer()
-
